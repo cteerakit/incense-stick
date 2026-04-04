@@ -1,0 +1,229 @@
+/* Incense visualization — uses neutral UI; warm accents for sticks only */
+:root {
+  --incense-accent: oklch(0.62 0.17 45);
+  --incense-accent-glow: oklch(0.62 0.17 45 / 45%);
+  --incense-ember: oklch(0.78 0.14 55);
+  --incense-stick: oklch(0.42 0.04 55);
+  --incense-stick-dark: oklch(0.32 0.04 55);
+  --incense-handle: oklch(0.34 0.11 22);
+  --incense-handle-dark: oklch(0.26 0.09 22);
+  /* Coated part only slightly wider than bare wood */
+  --stick-handle-w: 5px;
+  --stick-body-w: 6px;
+}
+
+.sticks {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: var(--sticks-gap, clamp(12px, 4vw, 22px));
+  min-height: 240px;
+  align-items: flex-end;
+  padding: 8px 0 20px;
+}
+
+.stick-slot {
+  flex: 0 0 auto;
+}
+
+.stick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 40px;
+}
+
+.stick__clip {
+  width: 100%;
+  height: min(42vh, 220px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  padding-bottom: 2px;
+}
+
+.stick__column {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+}
+
+.stick__burn-zone {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.stick__handle {
+  flex-shrink: 0;
+  width: var(--stick-handle-w);
+  height: 24%;
+  min-height: 28px;
+  max-height: 52px;
+  border-radius: 2px 2px 1px 1px;
+  background: linear-gradient(
+    90deg,
+    var(--incense-handle-dark),
+    var(--incense-handle) 42%,
+    oklch(0.3 0.1 22) 58%,
+    var(--incense-handle-dark)
+  );
+  box-shadow:
+    inset 0 0 0 1px oklch(0 0 0 / 45%),
+    0 1px 4px oklch(0 0 0 / 35%);
+}
+
+.stick__body {
+  --unburnt: 1;
+  position: relative;
+  width: var(--stick-body-w);
+  height: calc(var(--unburnt) * 100%);
+  min-height: 2px;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(
+    90deg,
+    var(--incense-stick-dark),
+    var(--incense-stick) 45%,
+    #6e5644 55%,
+    var(--incense-stick-dark)
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.35);
+  transform-origin: bottom center;
+}
+
+.stick__ember {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 11px;
+  height: 7px;
+  transform: translate(-50%, -35%);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 40%,
+    #fff3c9,
+    var(--incense-ember) 45%,
+    transparent 70%
+  );
+  opacity: 0;
+  filter: blur(0.5px);
+  pointer-events: none;
+}
+
+.stick__body--burning .stick__ember {
+  opacity: 0.95;
+  animation: incense-ember-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes incense-ember-pulse {
+  0%,
+  100% {
+    transform: translate(-50%, -35%) scale(1);
+    box-shadow: 0 0 10px var(--incense-accent-glow);
+  }
+  50% {
+    transform: translate(-50%, -38%) scale(1.08);
+    box-shadow: 0 0 16px var(--incense-accent-glow);
+  }
+}
+
+.stick__smoke {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(200, 200, 200, 0.35) 0%,
+    rgba(120, 120, 120, 0.12) 45%,
+    transparent 70%
+  );
+  filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stick__body--burning .stick__smoke {
+  opacity: 1;
+}
+
+.stick__body--burning .stick__smoke--a {
+  animation: incense-smoke-a 2.8s ease-out infinite;
+}
+
+.stick__smoke--b {
+  width: 13px;
+  height: 13px;
+  filter: blur(5px);
+}
+
+.stick__body--burning .stick__smoke--b {
+  animation: incense-smoke-b 3.4s ease-out infinite;
+  animation-delay: 0.6s;
+}
+
+@keyframes incense-smoke-a {
+  0% {
+    transform: translate(-50%, 0) scale(0.7);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(-65%, -72px) scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes incense-smoke-b {
+  0% {
+    transform: translate(-50%, 4px) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.65;
+  }
+  100% {
+    transform: translate(-35%, -88px) scale(1.5);
+    opacity: 0;
+  }
+}
+
+.dark .stick__body {
+  box-shadow:
+    inset 0 0 0 1px oklch(0 0 0 / 50%),
+    0 2px 12px oklch(0 0 0 / 55%);
+}
+
+.dark .stick__handle {
+  box-shadow:
+    inset 0 0 0 1px oklch(0 0 0 / 55%),
+    0 1px 6px oklch(0 0 0 / 45%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stick__body--burning .stick__ember {
+    animation: none;
+    opacity: 0.75;
+  }
+
+  .stick__body--burning .stick__smoke--a,
+  .stick__body--burning .stick__smoke--b {
+    animation: none;
+    opacity: 0.28;
+    transform: translate(-50%, -12px);
+  }
+}
