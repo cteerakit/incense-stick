@@ -37,7 +37,8 @@ export default defineConfig({
       manifest: {
         name: 'Incense Timer',
         short_name: 'Incense',
-        description: 'Parallel incense stick burn timer with smoke animation',
+        description:
+          'A digital incense stick you can "light" in the browser—a calm ritual without smoke or particulates. Use it instead of burning real incense to cut indoor air pollution while keeping a similar mood and pacing.',
         theme_color: '#1a1410',
         background_color: '#1a1410',
         display: 'standalone',
