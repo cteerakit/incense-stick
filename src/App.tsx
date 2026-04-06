@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useReducer,
   useRef,
   useState,
@@ -40,6 +41,25 @@ function sticksGapPxForCount(n: number): number {
   return Math.round(maxGap + t * (minGap - maxGap))
 }
 
+/** Deterministic 0..1 pseudo-random from index (stable across re-renders). */
+function hash01(i: number, salt: number): number {
+  const x = Math.imul(i ^ salt, 2654435761) >>> 0
+  return (x % 1000000) / 1000000
+}
+
+function smokeTimingForStickIndex(i: number) {
+  const r1 = hash01(i, 0x51ec)
+  const r2 = hash01(i, 0xa17e)
+  const r3 = hash01(i, 0xc0de)
+  const r4 = hash01(i, 0xbeef)
+  return {
+    delayA: r1 * 2.8,
+    durA: 2.2 + r2 * 1.2,
+    delayB: r3 * 3.4,
+    durB: 2.8 + r4 * 1.4,
+  }
+}
+
 function formatMs(ms: number): string {
   const totalSec = Math.ceil(ms / 1000)
   const m = Math.floor(totalSec / 60)
@@ -63,8 +83,6 @@ function StickVisualization({
     12,
     Math.max(1, Number.isFinite(c) ? Math.floor(c) : 1),
   )
-  const clipHeight =
-    'clamp(280px, calc(100dvh - 12.5rem), min(72dvh, 520px))'
   const preferredGapPx = sticksGapPxForCount(n)
   const rowRef = useRef<HTMLDivElement>(null)
   const [rowWidthPx, setRowWidthPx] = useState(0)
@@ -94,23 +112,43 @@ function StickVisualization({
     '--sticks-slot-trim': `${Math.min(0, jointSpacingPx)}px`,
   } as CSSProperties
 
+  const smokeTimings = useMemo(
+    () => Array.from({ length: n }, (_, i) => smokeTimingForStickIndex(i)),
+    [n],
+  )
+
   const sticksRow = (
     <div className="sticks" role="presentation" style={sticksStyle}>
-      {Array.from({ length: n }, (_, i) => (
+      {Array.from({ length: n }, (_, i) => {
+        const sm = smokeTimings[i]!
+        const smokeAStyle = {
+          '--smoke-delay': `${sm.delayA}s`,
+          '--smoke-duration': `${sm.durA}s`,
+        } as CSSProperties
+        const smokeBStyle = {
+          '--smoke-delay': `${sm.delayB}s`,
+          '--smoke-duration': `${sm.durB}s`,
+        } as CSSProperties
+        return (
         <div key={i} className="stick-slot">
           <div className="stick">
-            <div
-              className="stick__clip"
-              style={{ height: clipHeight } as CSSProperties}
-            >
+            <div className="stick__clip">
               <div className="stick__column">
                 <div className="stick__burn-zone">
                   <div
                     className={`stick__body ${burning && p > 0 && p < 1 ? 'stick__body--burning' : ''}`}
                     style={{ '--unburnt': String(unburnt) } as CSSProperties}
                   >
-                    <div className="stick__smoke stick__smoke--a" aria-hidden />
-                    <div className="stick__smoke stick__smoke--b" aria-hidden />
+                    <div
+                      className="stick__smoke stick__smoke--a"
+                      style={smokeAStyle}
+                      aria-hidden
+                    />
+                    <div
+                      className="stick__smoke stick__smoke--b"
+                      style={smokeBStyle}
+                      aria-hidden
+                    />
                     <div className="stick__ember" aria-hidden />
                   </div>
                 </div>
@@ -119,14 +157,15 @@ function StickVisualization({
             </div>
           </div>
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 
   return (
     <div
       ref={rowRef}
-      className="flex w-full min-w-0 max-w-full justify-center"
+      className="flex h-full min-h-0 w-full min-w-0 max-w-full justify-center"
     >
       {sticksRow}
     </div>
@@ -227,26 +266,20 @@ export default function App() {
     phase === 'idle' && p === 0 ? formatMs(timer.totalMs) : formatMs(timer.remainingMs)
 
   return (
-    <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-clip bg-background text-foreground">
+    <div className="flex h-dvh max-h-dvh min-h-0 min-w-0 flex-col overflow-hidden bg-background text-foreground">
       <main
         className={cn(
-          'mx-auto flex min-w-0 w-full max-w-md flex-1 flex-col overflow-x-clip px-4',
+          'mx-auto flex min-h-0 min-w-0 w-full max-w-md flex-1 flex-col overflow-hidden px-4',
           'pt-[calc(0.75rem+env(safe-area-inset-top,0px))]',
           'pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]',
         )}
       >
         {tab === 'flow' && (
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="shrink-0 space-y-5 pb-5 text-center" aria-live="polite">
-              <div>
-                <p className="text-[0.65rem] font-medium tracking-[0.2em] text-muted-foreground">
-                  TIME REMAINING
-                </p>
-                <p className="mt-1 text-[2.75rem] font-light tabular-nums tracking-tight text-foreground">
-                  {displayRemaining}
-                </p>
-              </div>
-
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-clip overflow-y-visible">
+            <div
+              className="relative z-10 shrink-0 space-y-5 pb-5 text-center [text-shadow:0_1px_2px_var(--background),0_0_12px_var(--background)] dark:[text-shadow:0_1px_3px_var(--background),0_0_14px_var(--background)]"
+              aria-live="polite"
+            >
               <div
                 className={cn(
                   'grid gap-3',
@@ -254,15 +287,32 @@ export default function App() {
                 )}
               >
                 <ControlTile
-                  label={burning ? 'Stop' : 'Start'}
+                  label={
+                    phase === 'done'
+                      ? 'Reset'
+                      : burning
+                        ? 'Pause'
+                        : phase === 'paused'
+                          ? 'Resume'
+                          : 'Start'
+                  }
                   icon={
-                    burning ? (
+                    phase === 'done' ? (
+                      <RotateCcw className="size-5" strokeWidth={1.75} />
+                    ) : burning ? (
                       <Pause className="size-5" strokeWidth={1.75} />
                     ) : (
                       <Play className="size-5" strokeWidth={1.75} />
                     )
                   }
                   onClick={() => {
+                    if (phase === 'done') {
+                      stopLoop()
+                      timerRef.current.restart()
+                      syncDuration()
+                      tick()
+                      return
+                    }
                     if (burning) {
                       timerRef.current.pause()
                       stopLoop()
@@ -283,7 +333,7 @@ export default function App() {
                 />
                 {activeSession && (
                   <ControlTile
-                    label="Restart"
+                    label="Reset"
                     icon={<RotateCcw className="size-5" strokeWidth={1.75} />}
                     onClick={() => {
                       stopLoop()
@@ -294,16 +344,25 @@ export default function App() {
                   />
                 )}
               </div>
+
+              <div>
+                <p className="text-[0.65rem] font-medium tracking-[0.2em] text-muted-foreground">
+                  TIME REMAINING
+                </p>
+                <p className="mt-1 text-[2.75rem] font-light tabular-nums tracking-tight text-foreground">
+                  {displayRemaining}
+                </p>
+              </div>
             </div>
 
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-x-clip">
+            <div className="relative z-0 flex min-h-0 min-w-0 flex-1 flex-col items-stretch justify-center overflow-x-clip overflow-y-visible">
               <StickVisualization count={stickCount} progress={p} burning={burning} />
             </div>
           </div>
         )}
 
         {tab === 'config' && (
-          <div className="flex flex-1 flex-col gap-5 pt-5">
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-hidden pt-5">
             <div>
               <h2 className="text-[0.7rem] font-semibold tracking-[0.16em] text-foreground">
                 TIMER SETTINGS
@@ -463,8 +522,8 @@ function ControlTile({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'flex flex-col items-center justify-center gap-2 rounded-xl border border-border/45 bg-muted/45 py-4 text-foreground transition-colors',
-        'hover:bg-muted/70 disabled:cursor-not-allowed disabled:opacity-35',
+        'flex flex-col items-center justify-center gap-2 rounded-xl border border-border/45 bg-transparent py-4 text-foreground transition-colors',
+        'hover:bg-foreground/[0.06] disabled:cursor-not-allowed disabled:opacity-35',
       )}
     >
       <span className="text-foreground [&_svg]:text-foreground">{icon}</span>

@@ -17,8 +17,11 @@
   flex-wrap: nowrap;
   justify-content: center;
   gap: var(--sticks-gap, clamp(12px, 4vw, 22px));
-  min-height: 280px;
-  align-items: center;
+  align-items: stretch;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
   padding: 8px 0 12px;
 }
 
@@ -35,11 +38,14 @@
   flex-direction: column;
   align-items: center;
   width: 52px;
+  height: 100%;
+  min-height: 0;
 }
 
 .stick__clip {
   width: 100%;
-  height: clamp(280px, calc(100dvh - 12.5rem), min(72dvh, 520px));
+  flex: 1 1 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -59,7 +65,7 @@
 .stick__burn-zone {
   flex: 0 0 auto;
   height: 72%;
-  min-height: 120px;
+  min-height: 0;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -164,7 +170,8 @@
 }
 
 .stick__body--burning .stick__smoke--a {
-  animation: incense-smoke-a 2.8s ease-out infinite;
+  animation: incense-smoke-a var(--smoke-duration, 2.8s) ease-out infinite;
+  animation-delay: var(--smoke-delay, 0s);
 }
 
 .stick__smoke--b {
@@ -174,8 +181,8 @@
 }
 
 .stick__body--burning .stick__smoke--b {
-  animation: incense-smoke-b 3.4s ease-out infinite;
-  animation-delay: 0.6s;
+  animation: incense-smoke-b var(--smoke-duration, 3.4s) ease-out infinite;
+  animation-delay: var(--smoke-delay, 0s);
 }
 
 @keyframes incense-smoke-a {
