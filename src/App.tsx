@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useReducer,
   useRef,
   useState,
@@ -24,6 +25,20 @@ import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 const DURATION_SLIDER_MAX = 30
+/** Matches `.stick { width }` in incense.css */
+const STICK_VISUAL_WIDTH_PX = 52
+
+/**
+ * Preferred space between stick centers (px) from count: fewer sticks → wider; more → tighter.
+ * Layout may reduce this (including overlap via negative trim) to fit the row — stick width stays 52px.
+ */
+function sticksGapPxForCount(n: number): number {
+  if (n <= 1) return 22
+  const maxGap = 32
+  const minGap = 2
+  const t = (n - 2) / (12 - 2)
+  return Math.round(maxGap + t * (minGap - maxGap))
+}
 
 function formatMs(ms: number): string {
   const totalSec = Math.ceil(ms / 1000)
@@ -43,18 +58,44 @@ function StickVisualization({
 }) {
   const p = Math.min(1, Math.max(0, progress))
   const unburnt = 1 - p
-  const n = Math.min(12, Math.max(1, Math.floor(count)))
+  const c = Number(count)
+  const n = Math.min(
+    12,
+    Math.max(1, Number.isFinite(c) ? Math.floor(c) : 1),
+  )
   const clipHeight =
     'clamp(280px, calc(100dvh - 12.5rem), min(72dvh, 520px))'
-  /* One row: widen spacing for few sticks, tighten toward 4px at 12 sticks */
-  const sticksGapPx = Math.max(4, 22 - Math.round(((n - 1) * 18) / 11))
+  const preferredGapPx = sticksGapPxForCount(n)
+  const rowRef = useRef<HTMLDivElement>(null)
+  const [rowWidthPx, setRowWidthPx] = useState(0)
 
-  return (
-    <div
-      className="sticks"
-      role="presentation"
-      style={{ '--sticks-gap': `${sticksGapPx}px` } as CSSProperties}
-    >
+  useLayoutEffect(() => {
+    const el = rowRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width
+      if (typeof w === 'number') setRowWidthPx(w)
+    })
+    ro.observe(el)
+    setRowWidthPx(el.getBoundingClientRect().width)
+    return () => ro.disconnect()
+  }, [])
+
+  let jointSpacingPx = n <= 1 ? 0 : preferredGapPx
+  if (n > 1 && rowWidthPx > 0) {
+    const fitJointPx = Math.floor(
+      (rowWidthPx - n * STICK_VISUAL_WIDTH_PX) / (n - 1),
+    )
+    jointSpacingPx = Math.min(preferredGapPx, fitJointPx)
+  }
+
+  const sticksStyle = {
+    '--sticks-gap': `${Math.max(0, jointSpacingPx)}px`,
+    '--sticks-slot-trim': `${Math.min(0, jointSpacingPx)}px`,
+  } as CSSProperties
+
+  const sticksRow = (
+    <div className="sticks" role="presentation" style={sticksStyle}>
       {Array.from({ length: n }, (_, i) => (
         <div key={i} className="stick-slot">
           <div className="stick">
@@ -79,6 +120,15 @@ function StickVisualization({
           </div>
         </div>
       ))}
+    </div>
+  )
+
+  return (
+    <div
+      ref={rowRef}
+      className="flex w-full min-w-0 max-w-full justify-center"
+    >
+      {sticksRow}
     </div>
   )
 }
@@ -177,16 +227,16 @@ export default function App() {
     phase === 'idle' && p === 0 ? formatMs(timer.totalMs) : formatMs(timer.remainingMs)
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
+    <div className="flex min-h-[100dvh] min-w-0 flex-col overflow-x-clip bg-background text-foreground">
       <main
         className={cn(
-          'mx-auto flex w-full max-w-md flex-1 flex-col px-4',
+          'mx-auto flex min-w-0 w-full max-w-md flex-1 flex-col overflow-x-clip px-4',
           'pt-[calc(0.75rem+env(safe-area-inset-top,0px))]',
           'pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]',
         )}
       >
         {tab === 'flow' && (
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <div className="shrink-0 space-y-5 pb-5 text-center" aria-live="polite">
               <div>
                 <p className="text-[0.65rem] font-medium tracking-[0.2em] text-muted-foreground">
@@ -246,7 +296,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-end pb-1">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-x-clip">
               <StickVisualization count={stickCount} progress={p} burning={burning} />
             </div>
           </div>
