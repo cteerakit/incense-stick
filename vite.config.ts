@@ -1,12 +1,27 @@
 import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+
+/** Absolute social preview image URL for og:image / twitter:image (OG requires absolute URLs). */
+function socialShareImagePlugin(): Plugin {
+  return {
+    name: 'social-share-image',
+    transformIndexHtml(html) {
+      const siteUrl =
+        process.env.VITE_SITE_URL?.replace(/\/$/, '') ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '')
+      const ogImage = siteUrl ? `${siteUrl}/og-image.png` : '/og-image.png'
+      return html.replaceAll('__OG_IMAGE__', ogImage)
+    },
+  }
+}
 
 export default defineConfig({
   plugins: [
     react(),
+    socialShareImagePlugin(),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -17,6 +32,7 @@ export default defineConfig({
         'apple-touch-icon.png',
         'pwa-192x192.png',
         'pwa-512x512.png',
+        'og-image.png',
       ],
       manifest: {
         name: 'Incense Timer',
