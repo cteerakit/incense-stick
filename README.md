@@ -1,6 +1,8 @@
 # Incense Stick
 
-A small web app that tracks incense burn time with a visual stick and timer. Built with React, TypeScript, Vite, and Tailwind CSS; includes PWA support for offline-friendly use.
+A digital incense stick you can “light” in the browser—a calm ritual without smoke or particulates. Use it instead of burning real incense to cut indoor air pollution while keeping a similar mood and pacing.
+
+Built with React, TypeScript, Vite, and Tailwind CSS; includes PWA support for offline-friendly use.
 
 ## Requirements
 
