@@ -8,8 +8,8 @@
   --incense-handle: oklch(0.34 0.11 22);
   --incense-handle-dark: oklch(0.26 0.09 22);
   /* Coated part only slightly wider than bare wood */
-  --stick-handle-w: 5px;
-  --stick-body-w: 6px;
+  --stick-handle-w: 6px;
+  --stick-body-w: 8px;
 }
 
 .sticks {
@@ -17,9 +17,9 @@
   flex-wrap: nowrap;
   justify-content: center;
   gap: var(--sticks-gap, clamp(12px, 4vw, 22px));
-  min-height: 240px;
+  min-height: 280px;
   align-items: flex-end;
-  padding: 8px 0 20px;
+  padding: 8px 0 12px;
 }
 
 .stick-slot {
@@ -30,12 +30,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 40px;
+  width: 52px;
 }
 
 .stick__clip {
   width: 100%;
-  height: min(42vh, 220px);
+  height: clamp(280px, calc(100dvh - 12.5rem), min(72dvh, 520px));
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -65,9 +65,8 @@
 .stick__handle {
   flex-shrink: 0;
   width: var(--stick-handle-w);
-  height: 24%;
-  min-height: 28px;
-  max-height: 52px;
+  height: 25%;
+  min-height: 20px;
   border-radius: 2px 2px 1px 1px;
   background: linear-gradient(
     90deg,
@@ -105,8 +104,8 @@
   position: absolute;
   top: 0;
   left: 50%;
-  width: 11px;
-  height: 7px;
+  width: 13px;
+  height: 8px;
   transform: translate(-50%, -35%);
   border-radius: 50%;
   background: radial-gradient(
@@ -141,8 +140,8 @@
   position: absolute;
   top: -5px;
   left: 50%;
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
@@ -164,8 +163,8 @@
 }
 
 .stick__smoke--b {
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
   filter: blur(5px);
 }
 

@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import {
+  AlertTriangle,
   Minus,
   Pause,
   Play,
@@ -43,7 +44,8 @@ function StickVisualization({
   const p = Math.min(1, Math.max(0, progress))
   const unburnt = 1 - p
   const n = Math.min(12, Math.max(1, Math.floor(count)))
-  const clipHeight = 'min(42vh, 220px)'
+  const clipHeight =
+    'clamp(280px, calc(100dvh - 12.5rem), min(72dvh, 520px))'
   /* One row: widen spacing for few sticks, tighten toward 4px at 12 sticks */
   const sticksGapPx = Math.max(4, 22 - Math.round(((n - 1) * 18) / 11))
 
@@ -88,7 +90,6 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('flow')
   const [stickCount, setStickCount] = useState(initial.stickCount)
   const [durationMinutes, setDurationMinutes] = useState(initial.durationMinutes)
-  const [saveFlash, setSaveFlash] = useState(false)
   const timerRef = useRef(new BurnTimer(initial.durationMinutes))
   const rafRef = useRef(0)
   const [, tick] = useReducer((n) => n + 1, 0)
@@ -126,7 +127,16 @@ export default function App() {
   const p = timer.progress
   const burning = phase === 'running'
   const activeSession = phase === 'running' || phase === 'paused'
-  const settingsLocked = activeSession
+
+  const resetSessionIfActive = useCallback(() => {
+    const t = timerRef.current
+    const ph = phaseFromTimer(t)
+    if (ph !== 'running' && ph !== 'paused') return
+    stopLoop()
+    t.restart()
+    t.setDurationMinutes(durationMinutes)
+    tick()
+  }, [stopLoop, durationMinutes, tick])
 
   const persist = useCallback(() => {
     saveSettings({
@@ -140,19 +150,17 @@ export default function App() {
   }, [persist])
 
   const onStickChange = (v: number) => {
+    if (v === stickCount) return
+    resetSessionIfActive()
     setStickCount(v)
   }
 
   const onDurationChange = (v: number) => {
+    if (v === durationMinutes) return
+    resetSessionIfActive()
     setDurationMinutes(v)
     timerRef.current.setDurationMinutes(v)
     tick()
-  }
-
-  const onSaveTap = () => {
-    persist()
-    setSaveFlash(true)
-    window.setTimeout(() => setSaveFlash(false), 900)
   }
 
   const onResetDefaults = () => {
@@ -178,12 +186,8 @@ export default function App() {
         )}
       >
         {tab === 'flow' && (
-          <div className="flex flex-1 flex-col">
-            <div className="flex flex-1 flex-col items-center justify-center">
-              <StickVisualization count={stickCount} progress={p} burning={burning} />
-            </div>
-
-            <div className="space-y-6 pb-2 text-center" aria-live="polite">
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="shrink-0 space-y-5 pb-5 text-center" aria-live="polite">
               <div>
                 <p className="text-[0.65rem] font-medium tracking-[0.2em] text-muted-foreground">
                   TIME REMAINING
@@ -241,6 +245,10 @@ export default function App() {
                 )}
               </div>
             </div>
+
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-end pb-1">
+              <StickVisualization count={stickCount} progress={p} burning={burning} />
+            </div>
           </div>
         )}
 
@@ -251,8 +259,24 @@ export default function App() {
                 TIMER SETTINGS
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Customize your digital incense session.
+                Customize your digital incense session. Changes save automatically.
               </p>
+
+              {activeSession && (
+                <div
+                  className="mt-3 flex gap-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2 text-xs leading-snug text-foreground/90 dark:bg-amber-500/10 dark:text-foreground/85"
+                  role="status"
+                >
+                  <AlertTriangle
+                    className="mt-0.5 size-3.5 shrink-0 text-amber-700 dark:text-amber-400"
+                    strokeWidth={2}
+                    aria-hidden
+                  />
+                  <span>
+                    Changing sticks or duration stops the timer and resets this session.
+                  </span>
+                </div>
+              )}
 
               <Card className="mt-4 border-border/50 bg-card shadow-md ring-foreground/[0.06]">
                 <CardContent className="space-y-6 pt-6">
@@ -268,7 +292,7 @@ export default function App() {
                     <div className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-muted/50 px-2 py-2.5">
                       <button
                         type="button"
-                        disabled={settingsLocked || stickCount <= 1}
+                        disabled={stickCount <= 1}
                         className="flex size-10 items-center justify-center rounded-lg text-lg text-foreground transition-colors hover:bg-background/50 disabled:opacity-35"
                         aria-label="Decrease sticks"
                         onClick={() => onStickChange(Math.max(1, stickCount - 1))}
@@ -280,7 +304,7 @@ export default function App() {
                       </span>
                       <button
                         type="button"
-                        disabled={settingsLocked || stickCount >= 12}
+                        disabled={stickCount >= 12}
                         className="flex size-10 items-center justify-center rounded-lg text-lg text-foreground transition-colors hover:bg-background/50 disabled:opacity-35"
                         aria-label="Increase sticks"
                         onClick={() => onStickChange(Math.min(12, stickCount + 1))}
@@ -305,7 +329,6 @@ export default function App() {
                       min={1}
                       max={DURATION_SLIDER_MAX}
                       value={durationMinutes}
-                      disabled={settingsLocked}
                       aria-valuemin={1}
                       aria-valuemax={DURATION_SLIDER_MAX}
                       aria-valuenow={durationMinutes}
@@ -324,18 +347,7 @@ export default function App() {
               </Card>
             </div>
 
-            <div className="mt-auto flex flex-col gap-2.5">
-              <Button
-                type="button"
-                size="lg"
-                className={cn(
-                  'h-12 w-full rounded-xl text-[0.9375rem] font-medium',
-                  saveFlash && 'ring-2 ring-foreground/20',
-                )}
-                onClick={onSaveTap}
-              >
-                Save Configuration
-              </Button>
+            <div className="mt-auto">
               <Button
                 type="button"
                 variant="secondary"
