@@ -20,6 +20,7 @@ import {
   Timer,
 } from 'lucide-react'
 import { BurnTimer, phaseFromTimer, type UiPhase } from './burn-timer'
+import { getMessages, type Locale } from './i18n/messages'
 import { DEFAULTS, loadSettings, saveSettings } from './storage'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -177,8 +178,10 @@ type Tab = 'flow' | 'config'
 export default function App() {
   const initial = loadSettings()
   const [tab, setTab] = useState<Tab>('flow')
+  const [locale, setLocale] = useState<Locale>(initial.locale)
   const [stickCount, setStickCount] = useState(initial.stickCount)
   const [durationMinutes, setDurationMinutes] = useState(initial.durationMinutes)
+  const t = getMessages(locale)
   const timerRef = useRef(new BurnTimer(initial.durationMinutes))
   const rafRef = useRef(0)
   const [, tick] = useReducer((n) => n + 1, 0)
@@ -231,12 +234,17 @@ export default function App() {
     saveSettings({
       stickCount,
       durationMinutes,
+      locale,
     })
-  }, [stickCount, durationMinutes])
+  }, [stickCount, durationMinutes, locale])
 
   useEffect(() => {
     persist()
   }, [persist])
+
+  useEffect(() => {
+    document.documentElement.lang = locale === 'th' ? 'th' : 'en'
+  }, [locale])
 
   const onStickChange = (v: number) => {
     if (v === stickCount) return
@@ -258,7 +266,7 @@ export default function App() {
     timerRef.current.setDurationMinutes(DEFAULTS.durationMinutes)
     setStickCount(DEFAULTS.stickCount)
     setDurationMinutes(DEFAULTS.durationMinutes)
-    saveSettings({ ...DEFAULTS })
+    saveSettings({ ...DEFAULTS, locale })
     tick()
   }
 
@@ -289,12 +297,12 @@ export default function App() {
                 <ControlTile
                   label={
                     phase === 'done'
-                      ? 'Reset'
+                      ? t.primaryActionReset
                       : burning
-                        ? 'Pause'
+                        ? t.primaryActionPause
                         : phase === 'paused'
-                          ? 'Resume'
-                          : 'Start'
+                          ? t.primaryActionResume
+                          : t.primaryActionStart
                   }
                   icon={
                     phase === 'done' ? (
@@ -333,7 +341,7 @@ export default function App() {
                 />
                 {activeSession && (
                   <ControlTile
-                    label="Reset"
+                    label={t.secondaryReset}
                     icon={<RotateCcw className="size-5" strokeWidth={1.75} />}
                     onClick={() => {
                       stopLoop()
@@ -347,7 +355,7 @@ export default function App() {
 
               <div>
                 <p className="text-[0.65rem] font-medium tracking-[0.2em] text-muted-foreground">
-                  TIME REMAINING
+                  {t.timeRemaining}
                 </p>
                 <p className="mt-1 text-[2.75rem] font-light tabular-nums tracking-tight text-foreground">
                   {displayRemaining}
@@ -365,10 +373,10 @@ export default function App() {
           <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-hidden pt-5">
             <div>
               <h2 className="text-[0.7rem] font-semibold tracking-[0.16em] text-foreground">
-                TIMER SETTINGS
+                {t.configTitle}
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Customize your digital incense session. Changes save automatically.
+                {t.configDescription}
               </p>
 
               {activeSession && (
@@ -381,9 +389,7 @@ export default function App() {
                     strokeWidth={2}
                     aria-hidden
                   />
-                  <span>
-                    Changing sticks or duration stops the timer and resets this session.
-                  </span>
+                  <span>{t.configSessionWarning}</span>
                 </div>
               )}
 
@@ -392,7 +398,43 @@ export default function App() {
                   <div className="space-y-2">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="text-[0.65rem] font-medium tracking-[0.14em] text-muted-foreground">
-                        NUMBER OF STICKS
+                        {t.languageLabel}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 rounded-xl border border-border/40 bg-muted/50 p-1">
+                      <button
+                        type="button"
+                        aria-pressed={locale === 'en'}
+                        className={cn(
+                          'flex flex-1 items-center justify-center rounded-lg py-2.5 text-xs font-medium transition-colors',
+                          locale === 'en'
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:bg-background/50',
+                        )}
+                        onClick={() => setLocale('en')}
+                      >
+                        {t.languageEnglish}
+                      </button>
+                      <button
+                        type="button"
+                        aria-pressed={locale === 'th'}
+                        className={cn(
+                          'flex flex-1 items-center justify-center rounded-lg py-2.5 text-xs font-medium transition-colors',
+                          locale === 'th'
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:bg-background/50',
+                        )}
+                        onClick={() => setLocale('th')}
+                      >
+                        {t.languageThai}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-[0.65rem] font-medium tracking-[0.14em] text-muted-foreground">
+                        {t.numberOfSticks}
                       </span>
                       <span className="text-sm font-medium tabular-nums text-foreground">
                         {String(stickCount).padStart(2, '0')}
@@ -403,19 +445,19 @@ export default function App() {
                         type="button"
                         disabled={stickCount <= 1}
                         className="flex size-10 items-center justify-center rounded-lg text-lg text-foreground transition-colors hover:bg-background/50 disabled:opacity-35"
-                        aria-label="Decrease sticks"
+                        aria-label={t.decreaseSticksAria}
                         onClick={() => onStickChange(Math.max(1, stickCount - 1))}
                       >
                         <Minus className="size-4" strokeWidth={2} />
                       </button>
                       <span className="text-xs font-medium text-muted-foreground">
-                        Adjust Quantity
+                        {t.adjustQuantity}
                       </span>
                       <button
                         type="button"
                         disabled={stickCount >= 12}
                         className="flex size-10 items-center justify-center rounded-lg text-lg text-foreground transition-colors hover:bg-background/50 disabled:opacity-35"
-                        aria-label="Increase sticks"
+                        aria-label={t.increaseSticksAria}
                         onClick={() => onStickChange(Math.min(12, stickCount + 1))}
                       >
                         <Plus className="size-4" strokeWidth={2} />
@@ -426,10 +468,10 @@ export default function App() {
                   <div className="space-y-2">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="text-[0.65rem] font-medium tracking-[0.14em] text-muted-foreground">
-                        BURNING DURATION
+                        {t.burningDuration}
                       </span>
                       <span className="text-sm font-medium text-foreground">
-                        {durationMinutes} mins
+                        {t.durationMinutes(durationMinutes)}
                       </span>
                     </div>
                     <input
@@ -441,15 +483,15 @@ export default function App() {
                       aria-valuemin={1}
                       aria-valuemax={DURATION_SLIDER_MAX}
                       aria-valuenow={durationMinutes}
-                      aria-label="Burning duration in minutes"
+                      aria-label={t.sliderAriaLabel}
                       onChange={(e) =>
                         onDurationChange(Number(e.target.value) || 1)
                       }
                     />
                     <div className="flex justify-between px-0.5 text-[0.65rem] tabular-nums text-muted-foreground">
-                      <span>1M</span>
-                      <span>15M</span>
-                      <span>30M</span>
+                      <span>{t.durationTick1}</span>
+                      <span>{t.durationTick15}</span>
+                      <span>{t.durationTick30}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -464,7 +506,7 @@ export default function App() {
                 className="h-12 w-full rounded-xl text-[0.9375rem] font-medium"
                 onClick={onResetDefaults}
               >
-                Reset to Default
+                {t.resetToDefault}
               </Button>
             </div>
           </div>
@@ -474,7 +516,7 @@ export default function App() {
       <nav
         className="fixed bottom-0 left-0 right-0 z-10 border-t border-border/50 bg-background/90 backdrop-blur-md"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-        aria-label="Primary"
+        aria-label={t.navAriaLabel}
       >
         <div className="mx-auto flex max-w-md">
           <button
@@ -486,7 +528,7 @@ export default function App() {
             onClick={() => setTab('flow')}
           >
             <Timer className="size-5" strokeWidth={tab === 'flow' ? 2 : 1.5} />
-            Flow
+            {t.navFlow}
           </button>
           <button
             type="button"
@@ -497,7 +539,7 @@ export default function App() {
             onClick={() => setTab('config')}
           >
             <SlidersHorizontal className="size-5" strokeWidth={tab === 'config' ? 2 : 1.5} />
-            Config
+            {t.navConfig}
           </button>
         </div>
       </nav>

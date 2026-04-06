@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource/noto-sans-thai/400.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -155,6 +156,10 @@
     height: 6px;
     border-radius: 9999px;
     background: oklch(1 0 0 / 12%);
+}
+
+html[lang='th'] {
+  font-family: 'Geist Variable', 'Noto Sans Thai', sans-serif;
 }
 
 @layer base {
